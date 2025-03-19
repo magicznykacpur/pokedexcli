@@ -18,7 +18,9 @@ func (p *Pokedex) Catch(pokemon decoding.Pokemon) {
 }
 
 func (p *Pokedex) Get(name string) (decoding.Pokemon, bool){
+	p.mu.Lock()
 	pokemon, ok := p.caughtPokemons[name]
+	p.mu.Unlock()
 	
 	return pokemon, ok
 }
