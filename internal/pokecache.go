@@ -9,7 +9,7 @@ import (
 type Cache struct {
 	entries  map[string]cacheEntry
 	interval time.Duration
-	mu       *sync.Mutex
+	mu       sync.Mutex
 }
 
 type cacheEntry struct {
@@ -17,22 +17,22 @@ type cacheEntry struct {
 	val       []byte
 }
 
-func NewCache(interval time.Duration) Cache {
-	cache := Cache{interval: interval}
+func NewCache(interval time.Duration) *Cache {
+	cache := Cache{entries: map[string]cacheEntry{}, interval: interval}
 	go cache.reapLoop()
 
-	return cache
+	return &cache
 }
 
-func (c Cache) Add(key string, val []byte) {
-	newEntry := cacheEntry{createdAt: time.Time{}, val: val}
+func (c *Cache) Add(key string, val []byte) {
+	newEntry := cacheEntry{createdAt: time.Now(), val: val}
 
 	c.mu.Lock()
 	c.entries[key] = newEntry
 	c.mu.Unlock()
 }
 
-func (c Cache) Get(key string) ([]byte, bool) {
+func (c *Cache) Get(key string) ([]byte, bool) {
 	c.mu.Lock()
 	entry, ok := c.entries[key]
 	c.mu.Unlock()
@@ -40,18 +40,18 @@ func (c Cache) Get(key string) ([]byte, bool) {
 	return entry.val, ok
 }
 
-func (c Cache) reapLoop() {
+func (c *Cache) reapLoop() {
 	interval := c.interval
 	ticker := time.NewTicker(interval)
 
 	for {
 		<-ticker.C
 		for key, entry := range c.entries {
-			if time.Until(entry.createdAt) > interval {
-				fmt.Printf("deleting: %s", key)
+			if time.Since(entry.createdAt) > interval {
+				fmt.Printf("deleting: %s\n", key)
 				delete(c.entries, key)
 			}
-		} 
-		
+		}
+
 	}
 }

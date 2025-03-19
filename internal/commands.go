@@ -77,21 +77,31 @@ type locationArea struct {
 	} `json:"results"`
 }
 
-var cache = NewCache(time.Second * 5)
+var cache = NewCache(time.Second * 69)
 
 func commandMap(c *Config) error {
 	var locationsAreaUrl string
-	if c.Next == "" {
-		locationsAreaUrl = baseUrl + "location-area/"
-	} else {
+	if c.Next != "" {
 		locationsAreaUrl = c.Next
+	} else {
+		locationsAreaUrl = baseUrl + "location-area/?offset=0&limit=20"
 	}
 
-	cachedEntry, ok := cache.Get(locationsAreaUrl)
+	cachedBytes, ok := cache.Get(locationsAreaUrl)
 	if ok {
-		for _, location := range cachedEntry {
-			fmt.Println(location)
+		fmt.Println("RETURNING CACHED LOCATIONS")
+
+		var locationArea locationArea
+		if err := json.Unmarshal(cachedBytes, &locationArea); err != nil {
+			return fmt.Errorf("couldn't unmarshal location areas: %v", err)
 		}
+		for _, location := range locationArea.Results {
+			fmt.Println(location.Name)
+		}
+
+		c.Previous = locationArea.Previous
+		c.Next = locationArea.Next
+
 		return nil
 	}
 
@@ -99,21 +109,21 @@ func commandMap(c *Config) error {
 	if err != nil {
 		return fmt.Errorf("couldn't get location areas: %v", err)
 	}
-	defer res.Body.Close()
 
-	
-	var locationArea locationArea
-	decoder := json.NewDecoder(res.Body)
-	if err := decoder.Decode(&locationArea); err != nil {
-		return fmt.Errorf("couldn't decode location areas: %v", err)
-	}
+	defer res.Body.Close()
 
 	bytes, err := io.ReadAll(res.Body)
 	if err != nil {
 		return fmt.Errorf("couldn't read bytes of response: %v", err)
 	}
-	
-	cache.Add(locationArea.Previous, bytes)
+
+	var locationArea locationArea
+	if err := json.Unmarshal(bytes, &locationArea); err != nil {
+		return fmt.Errorf("couldn't unmarshal location areas: %v", err)
+	}
+
+	cache.Add(locationsAreaUrl, bytes)
+
 	c.Previous = locationArea.Previous
 	c.Next = locationArea.Next
 
@@ -127,6 +137,25 @@ func commandMap(c *Config) error {
 func commandMapB(c *Config) error {
 	if c.Previous == "" {
 		fmt.Println("you're on the first page")
+		c.Next = ""
+		return nil
+	}
+
+	cachedBytes, ok := cache.Get(c.Previous)
+	if ok {
+		fmt.Println("RETURNING CACHED LOCATIONS")
+
+		var locationArea locationArea
+		if err := json.Unmarshal(cachedBytes, &locationArea); err != nil {
+			return fmt.Errorf("couldn't unmarshal location areas: %v", err)
+		}
+		for _, location := range locationArea.Results {
+			fmt.Println(location.Name)
+		}
+
+		c.Previous = locationArea.Previous
+		c.Next = locationArea.Next
+
 		return nil
 	}
 
@@ -136,12 +165,17 @@ func commandMapB(c *Config) error {
 	}
 	defer res.Body.Close()
 
-	var locationArea locationArea
-	decoder := json.NewDecoder(res.Body)
-	if err := decoder.Decode(&locationArea); err != nil {
-		return fmt.Errorf("couldn't decode location area: %v", err)
+	bytes, err := io.ReadAll(res.Body)
+	if err != nil {
+		return fmt.Errorf("couldn't read bytes of response: %v", err)
 	}
 
+	var locationArea locationArea
+	if err := json.Unmarshal(bytes, &locationArea); err != nil {
+		return fmt.Errorf("couldn't unmarshal location areas: %v", err)
+	}
+
+	cache.Add(locationArea.Previous, bytes)
 	c.Previous = locationArea.Previous
 	c.Next = locationArea.Next
 
