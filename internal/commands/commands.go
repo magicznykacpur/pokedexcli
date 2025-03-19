@@ -1,11 +1,11 @@
 package commands
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"time"
 
+	"github.com/magicznykacpur/pokedexcli/internal/decoding"
 	"github.com/magicznykacpur/pokedexcli/internal/pokeapi"
 	"github.com/magicznykacpur/pokedexcli/internal/pokecache"
 )
@@ -13,7 +13,7 @@ import (
 type CliCommand struct {
 	name        string
 	description string
-	Callback    func(c *Config) error
+	Callback    func(c *Config, args ...string) error
 }
 
 type Config struct {
@@ -43,17 +43,22 @@ func GetSupportedCommands() map[string]CliCommand {
 			description: "Displays previous 20 location areas in Pokemon world",
 			Callback:    commandMapB,
 		},
+		"explore": {
+			name:        "explore",
+			description: "Displays pokemons that can be found in the given area",
+			Callback:    commandExplore,
+		},
 	}
 }
 
-func commandExit(c *Config) error {
+func commandExit(c *Config, args ...string) error {
 	fmt.Println("Closing the Pokedex... Goodbye!")
 	os.Exit(0)
 
 	return nil
 }
 
-func commandHelp(c *Config) error {
+func commandHelp(c *Config, args ...string) error {
 	help := "Welcome to the Pokedex!\nUsage:\n\n"
 	supportedCommands := GetSupportedCommands()
 
@@ -69,11 +74,11 @@ func commandHelp(c *Config) error {
 var cache = pokecache.NewCache(time.Second * 69)
 
 func useCachedResponse(cachedBytes []byte, c *Config) error {
-	var locationArea pokeapi.LocationArea
-	if err := json.Unmarshal(cachedBytes, &locationArea); err != nil {
-		return fmt.Errorf("couldn't unmarshal location areas: %v", err)
+	locationArea, err := decoding.UnmarshalLocationArea(cachedBytes)
+	if err != nil {
+		return fmt.Errorf("couldn't unmarshall location area: %v", err)
 	}
-
+	
 	for _, location := range locationArea.Results {
 		fmt.Println(location.Name)
 	}
@@ -84,7 +89,7 @@ func useCachedResponse(cachedBytes []byte, c *Config) error {
 	return nil
 }
 
-func commandMap(c *Config) error {
+func commandMap(c *Config, args ...string) error {
 	var locationsAreaUrl string
 	if c.Next != "" {
 		locationsAreaUrl = c.Next
@@ -102,7 +107,7 @@ func commandMap(c *Config) error {
 		return fmt.Errorf("could get location area bytes: %v", err)
 	}
 
-	locationArea, err := pokeapi.UnmarshalLocationArea(bytes)
+	locationArea, err := decoding.UnmarshalLocationArea(bytes)
 	if err != nil {
 		return err
 	}
@@ -119,7 +124,7 @@ func commandMap(c *Config) error {
 	return nil
 }
 
-func commandMapB(c *Config) error {
+func commandMapB(c *Config, args ...string) error {
 	if c.Previous == "" {
 		fmt.Println("you're on the first page")
 		c.Next = ""
@@ -136,7 +141,7 @@ func commandMapB(c *Config) error {
 		return fmt.Errorf("couldn't get location area bytes: %v", err)
 	}
 
-	locationArea, err := pokeapi.UnmarshalLocationArea(bytes)
+	locationArea, err := decoding.UnmarshalLocationArea(bytes)
 	if err != nil {
 		return err
 	}
@@ -149,5 +154,53 @@ func commandMapB(c *Config) error {
 		fmt.Println(location.Name)
 	}
 
+	return nil
+}
+
+func commandExplore(_ *Config, args ...string) error {
+	location := args[1]
+	
+	cachedBytes, ok := cache.Get(location)
+	if ok {
+		locationAreaByLocation, err := decoding.UnmarshalLocationAreaByLocation(cachedBytes)
+		if err != nil {
+			return fmt.Errorf("coudln't decode location area: %v", err)
+		}
+		
+		names := ""
+		for _, encounter := range locationAreaByLocation.PokemonEncounters {
+			names += encounter.Pokemon.Name + " "
+		}
+
+		fmt.Println(names)
+		return nil
+	}
+
+	bytes, err := pokeapi.GetLocationAreaByLocationBytes(location)
+	if err != nil {
+		return fmt.Errorf("couldn't get pokemons by location area: %v", err)
+	}
+
+	cache.Add(location, bytes)
+	
+	locationAreaByLocation, err := decoding.UnmarshalLocationAreaByLocation(bytes)
+	if err != nil {
+		return fmt.Errorf("coudln't decode location area: %v", err)
+	}
+	
+	fmt.Printf("Exploring %s...\n", location)
+
+	names := ""
+	for _, encounter := range locationAreaByLocation.PokemonEncounters {
+		names += fmt.Sprintf(" - %s\n", encounter.Pokemon.Name)
+	}
+
+	if len(names) > 0 {
+		fmt.Println("Found pokemons:")
+		fmt.Println(names)
+	} else {
+		fmt.Println("Nothing found...")
+	}
+	
 	return nil
 }
