@@ -3,8 +3,6 @@ package internal
 import (
 	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
 	"time"
 )
@@ -65,18 +63,6 @@ func commandHelp(c *Config) error {
 	return nil
 }
 
-const baseUrl string = "https://pokeapi.co/api/v2/"
-
-type locationArea struct {
-	Count    int    `json:"count"`
-	Next     string `json:"next"`
-	Previous string `json:"previous"`
-	Results  []struct {
-		Name string `json:"name"`
-		Url  string `json:"url"`
-	} `json:"results"`
-}
-
 var cache = NewCache(time.Second * 69)
 
 func useCachedResponse(cachedBytes []byte, c *Config) error {
@@ -93,22 +79,6 @@ func useCachedResponse(cachedBytes []byte, c *Config) error {
 	c.Next = locationArea.Next
 
 	return nil
-}
-
-func getLocationAreaBytes(url string) ([]byte, error) {
-	res, err := http.Get(url)
-	if err != nil {
-		return []byte{}, fmt.Errorf("couldn't get location areas: %v", err)
-	}
-
-	defer res.Body.Close()
-
-	bytes, err := io.ReadAll(res.Body)
-	if err != nil {
-		return []byte{}, fmt.Errorf("couldn't read bytes of response: %v", err)
-	}
-
-	return bytes, nil
 }
 
 func commandMap(c *Config) error {
@@ -129,9 +99,9 @@ func commandMap(c *Config) error {
 		return fmt.Errorf("could get location area bytes: %v", err)
 	}
 
-	var locationArea locationArea
-	if err := json.Unmarshal(bytes, &locationArea); err != nil {
-		return fmt.Errorf("couldn't unmarshal location areas: %v", err)
+	locationArea, err := unmarshalLocationArea(bytes)
+	if err != nil {
+		return err
 	}
 
 	cache.Add(locationsAreaUrl, bytes)
@@ -163,9 +133,9 @@ func commandMapB(c *Config) error {
 		return fmt.Errorf("couldn't get location area bytes: %v", err)
 	}
 
-	var locationArea locationArea
-	if err := json.Unmarshal(bytes, &locationArea); err != nil {
-		return fmt.Errorf("couldn't unmarshal location areas: %v", err)
+	locationArea, err := unmarshalLocationArea(bytes)
+	if err != nil {
+		return err
 	}
 
 	cache.Add(locationArea.Previous, bytes)
