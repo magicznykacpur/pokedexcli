@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"math/rand/v2"
 	"os"
 	"time"
 
@@ -48,6 +49,11 @@ func GetSupportedCommands() map[string]CliCommand {
 			description: "Displays pokemons that can be found in the given area",
 			Callback:    commandExplore,
 		},
+		"catch": {
+			name:        "catch",
+			description: "Attempts to catch a pokemon",
+			Callback:    commandCatch,
+		},
 	}
 }
 
@@ -76,7 +82,7 @@ var cache = pokecache.NewCache(time.Second * 69)
 func useCachedResponse(cachedBytes []byte, c *Config) error {
 	locationArea, err := decoding.UnmarshalLocationArea(cachedBytes)
 	if err != nil {
-		return fmt.Errorf("couldn't unmarshall location area: %v", err)
+		return err
 	}
 	
 	for _, location := range locationArea.Results {
@@ -104,7 +110,7 @@ func commandMap(c *Config, args ...string) error {
 
 	bytes, err := pokeapi.GetLocationAreaBytes(locationsAreaUrl)
 	if err != nil {
-		return fmt.Errorf("could get location area bytes: %v", err)
+		return err
 	}
 
 	locationArea, err := decoding.UnmarshalLocationArea(bytes)
@@ -138,7 +144,7 @@ func commandMapB(c *Config, args ...string) error {
 
 	bytes, err := pokeapi.GetLocationAreaBytes(c.Previous)
 	if err != nil {
-		return fmt.Errorf("couldn't get location area bytes: %v", err)
+		return err
 	}
 
 	locationArea, err := decoding.UnmarshalLocationArea(bytes)
@@ -164,7 +170,7 @@ func commandExplore(_ *Config, args ...string) error {
 	if ok {
 		locationAreaByLocation, err := decoding.UnmarshalLocationAreaByLocation(cachedBytes)
 		if err != nil {
-			return fmt.Errorf("coudln't decode location area: %v", err)
+			return err
 		}
 		
 		names := ""
@@ -178,14 +184,14 @@ func commandExplore(_ *Config, args ...string) error {
 
 	bytes, err := pokeapi.GetLocationAreaByLocationBytes(location)
 	if err != nil {
-		return fmt.Errorf("couldn't get pokemons by location area: %v", err)
+		return err
 	}
 
 	cache.Add(location, bytes)
 	
 	locationAreaByLocation, err := decoding.UnmarshalLocationAreaByLocation(bytes)
 	if err != nil {
-		return fmt.Errorf("coudln't decode location area: %v", err)
+		return err
 	}
 	
 	fmt.Printf("Exploring %s...\n", location)
@@ -200,6 +206,32 @@ func commandExplore(_ *Config, args ...string) error {
 		fmt.Println(names)
 	} else {
 		fmt.Println("Nothing found...")
+	}
+	
+	return nil
+}
+
+func commandCatch(c *Config, args ...string) error {
+	name := args[1]
+	bytes, err := pokeapi.GetPokemonByName(name)
+	if err != nil {
+		return err
+	}
+
+	pokemon, err := decoding.UnmarshalPokemon(bytes)
+	if err != nil {
+		return err
+	}
+
+	baseExp := pokemon.BaseExperience
+	randomInt := rand.IntN(baseExp)
+
+	fmt.Printf("Throwing a Pokeball at %s...\n", name)
+
+	if randomInt > baseExp / 2 {
+		fmt.Printf("%s was caught!\n", name)
+	} else {
+		fmt.Printf("%s escaped!\n", name)
 	}
 	
 	return nil

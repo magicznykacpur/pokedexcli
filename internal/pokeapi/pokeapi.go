@@ -31,12 +31,31 @@ func GetLocationAreaBytes(url string) ([]byte, error) {
 func GetLocationAreaByLocationBytes(locationArea string) ([]byte, error) {
 	res, err := http.Get(BaseUrl + "location-area/" + locationArea)
 	if err != nil {
-		return []byte{}, fmt.Errorf("could get pokemons for area: %s, %v", locationArea, err)
+		return []byte{}, fmt.Errorf("couldn't get location area by location for area: %s, %v", locationArea, err)
 	}
 	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
 		return []byte{}, fmt.Errorf("couldn't get location area by location: %v", res.StatusCode)
+	}
+
+	bytes, err := io.ReadAll(res.Body)
+	if err != nil {
+		return []byte{}, fmt.Errorf("couldn't read bytes of response: %v", err)
+	}
+
+	return bytes, nil
+}
+
+func GetPokemonByName(name string) ([]byte, error) {
+	res, err := http.Get(BaseUrl + "pokemon/" + name)
+	if err != nil {
+		return []byte{}, fmt.Errorf("couldn't get pokemon by name: %s, %v", name, err)
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		return []byte{}, fmt.Errorf("couldn't get pokemon by name: %s, status code: %d", name, res.StatusCode)
 	}
 
 	bytes, err := io.ReadAll(res.Body)
