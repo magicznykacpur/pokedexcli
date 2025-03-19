@@ -15,7 +15,8 @@ func cleanInput(text string) []string {
 func main() {
 	supportedCommands := getSupportedCommands()
 	scanner := bufio.NewScanner(os.Stdin)
-	
+	config := config{Previous: "", Next: ""}
+
 	for {
 		fmt.Printf("Pokedex > ")
 		
@@ -24,7 +25,10 @@ func main() {
 
 		command, ok := supportedCommands[input[0]]
 		if ok {
-			command.callback()
+			err := command.callback(&config)
+			if err != nil {
+				fmt.Println(err)
+			}
 		} else {
 			fmt.Println("Unknown command")
 		}
