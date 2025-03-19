@@ -1,4 +1,4 @@
-package main
+package commands
 
 import (
 	"encoding/json"
@@ -7,52 +7,52 @@ import (
 	"os"
 )
 
-type cliCommand struct {
+type CliCommand struct {
 	name        string
 	description string
-	callback    func(c *config) error
+	Callback    func(c *Config) error
 }
 
-type config struct {
+type Config struct {
 	Next     string
 	Previous string
 }
 
-func getSupportedCommands() map[string]cliCommand {
-	return map[string]cliCommand{
+func GetSupportedCommands() map[string]CliCommand {
+	return map[string]CliCommand{
 		"exit": {
 			name:        "exit",
 			description: "Exit the Pokedex",
-			callback:    commandExit,
+			Callback:    commandExit,
 		},
 		"help": {
 			name:        "help",
 			description: "Displays a help message",
-			callback:    commandHelp,
+			Callback:    commandHelp,
 		},
 		"map": {
 			name:        "map",
 			description: "Displays next 20 location areas in Pokemon world",
-			callback:    commandMap,
+			Callback:    commandMap,
 		},
 		"mapb": {
 			name:        "mapb",
 			description: "Displays previous 20 location areas in Pokemon world",
-			callback:    commandMapB,
+			Callback:    commandMapB,
 		},
 	}
 }
 
-func commandExit(c *config) error {
+func commandExit(c *Config) error {
 	fmt.Println("Closing the Pokedex... Goodbye!")
 	os.Exit(0)
 
 	return nil
 }
 
-func commandHelp(c *config) error {
+func commandHelp(c *Config) error {
 	help := "Welcome to the Pokedex!\nUsage:\n\n"
-	supportedCommands := getSupportedCommands()
+	supportedCommands := GetSupportedCommands()
 
 	for _, command := range supportedCommands {
 		help += fmt.Sprintf("%s: %s\n", command.name, command.description)
@@ -75,7 +75,7 @@ type locationArea struct {
 	} `json:"results"`
 }
 
-func commandMap(c *config) error {
+func commandMap(c *Config) error {
 	var locationsAreaUrl string
 	if c.Next == "" {
 		locationsAreaUrl = baseUrl + "location-area/"
@@ -105,7 +105,7 @@ func commandMap(c *config) error {
 	return nil
 }
 
-func commandMapB(c *config) error {
+func commandMapB(c *Config) error {
 	if c.Previous == "" {
 		fmt.Println("you're on the first page")
 		return nil

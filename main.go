@@ -5,6 +5,10 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
+
+	"github.com/magicznykacpur/pokedexcli/internal/commands"
+	"github.com/magicznykacpur/pokedexcli/internal/pokecache"
 )
 
 func cleanInput(text string) []string {
@@ -13,19 +17,20 @@ func cleanInput(text string) []string {
 }
 
 func main() {
-	supportedCommands := getSupportedCommands()
+	supportedCommands := commands.GetSupportedCommands()
 	scanner := bufio.NewScanner(os.Stdin)
-	config := config{Previous: "", Next: ""}
+	config := commands.Config{Previous: "", Next: ""}
+	pokecache.NewCache(time.Millisecond * 1000)
 
 	for {
 		fmt.Printf("Pokedex > ")
-		
+
 		scanner.Scan()
 		input := cleanInput(scanner.Text())
 
 		command, ok := supportedCommands[input[0]]
 		if ok {
-			err := command.callback(&config)
+			err := command.Callback(&config)
 			if err != nil {
 				fmt.Println(err)
 			}
