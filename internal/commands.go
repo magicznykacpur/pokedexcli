@@ -1,4 +1,4 @@
-package commands
+package internal
 
 import (
 	"encoding/json"
@@ -7,8 +7,6 @@ import (
 	"net/http"
 	"os"
 	"time"
-
-	"github.com/magicznykacpur/pokedexcli/internal/pokecache"
 )
 
 type CliCommand struct {
@@ -79,7 +77,7 @@ type locationArea struct {
 	} `json:"results"`
 }
 
-var cache = pokecache.NewCache(time.Second * 5)
+var cache = NewCache(time.Second * 5)
 
 func commandMap(c *Config) error {
 	var locationsAreaUrl string

@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/magicznykacpur/pokedexcli/internal/commands"
+	"github.com/magicznykacpur/pokedexcli/internal"
 )
 
 func cleanInput(text string) []string {
@@ -15,9 +15,9 @@ func cleanInput(text string) []string {
 }
 
 func main() {
-	supportedCommands := commands.GetSupportedCommands()
+	supportedCommands := internal.GetSupportedCommands()
 	scanner := bufio.NewScanner(os.Stdin)
-	config := commands.Config{Previous: "", Next: ""}
+	config := internal.Config{Previous: "", Next: ""}
 
 	for {
 		fmt.Printf("Pokedex > ")
