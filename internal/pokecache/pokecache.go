@@ -45,13 +45,13 @@ func (c Cache) reapLoop() {
 	ticker := time.NewTicker(interval)
 
 	for {
-		select {
-		case t := <-ticker.C:
-			fmt.Println(t)
-		}
+		<-ticker.C
+		for key, entry := range c.entries {
+			if time.Until(entry.createdAt) > interval {
+				fmt.Printf("deleting: %s", key)
+				delete(c.entries, key)
+			}
+		} 
+		
 	}
-
-	// for _, entry := c.entries {
-	// 	if 
-	// }
 }

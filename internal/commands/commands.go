@@ -3,8 +3,12 @@ package commands
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
+	"time"
+
+	"github.com/magicznykacpur/pokedexcli/internal/pokecache"
 )
 
 type CliCommand struct {
@@ -75,6 +79,8 @@ type locationArea struct {
 	} `json:"results"`
 }
 
+var cache = pokecache.NewCache(time.Second * 5)
+
 func commandMap(c *Config) error {
 	var locationsAreaUrl string
 	if c.Next == "" {
@@ -83,18 +89,33 @@ func commandMap(c *Config) error {
 		locationsAreaUrl = c.Next
 	}
 
+	cachedEntry, ok := cache.Get(locationsAreaUrl)
+	if ok {
+		for _, location := range cachedEntry {
+			fmt.Println(location)
+		}
+		return nil
+	}
+
 	res, err := http.Get(locationsAreaUrl)
 	if err != nil {
 		return fmt.Errorf("couldn't get location areas: %v", err)
 	}
 	defer res.Body.Close()
 
+	
 	var locationArea locationArea
 	decoder := json.NewDecoder(res.Body)
 	if err := decoder.Decode(&locationArea); err != nil {
 		return fmt.Errorf("couldn't decode location areas: %v", err)
 	}
 
+	bytes, err := io.ReadAll(res.Body)
+	if err != nil {
+		return fmt.Errorf("couldn't read bytes of response: %v", err)
+	}
+	
+	cache.Add(locationArea.Previous, bytes)
 	c.Previous = locationArea.Previous
 	c.Next = locationArea.Next
 
