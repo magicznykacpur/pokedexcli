@@ -1,10 +1,13 @@
-package internal
+package commands
 
 import (
 	"encoding/json"
 	"fmt"
 	"os"
 	"time"
+
+	"github.com/magicznykacpur/pokedexcli/internal/pokeapi"
+	"github.com/magicznykacpur/pokedexcli/internal/pokecache"
 )
 
 type CliCommand struct {
@@ -63,10 +66,10 @@ func commandHelp(c *Config) error {
 	return nil
 }
 
-var cache = NewCache(time.Second * 69)
+var cache = pokecache.NewCache(time.Second * 69)
 
 func useCachedResponse(cachedBytes []byte, c *Config) error {
-	var locationArea locationArea
+	var locationArea pokeapi.LocationArea
 	if err := json.Unmarshal(cachedBytes, &locationArea); err != nil {
 		return fmt.Errorf("couldn't unmarshal location areas: %v", err)
 	}
@@ -86,7 +89,7 @@ func commandMap(c *Config) error {
 	if c.Next != "" {
 		locationsAreaUrl = c.Next
 	} else {
-		locationsAreaUrl = baseUrl + "location-area/?offset=0&limit=20"
+		locationsAreaUrl = pokeapi.BaseUrl + "location-area/?offset=0&limit=20"
 	}
 
 	cachedBytes, ok := cache.Get(locationsAreaUrl)
@@ -94,12 +97,12 @@ func commandMap(c *Config) error {
 		return useCachedResponse(cachedBytes, c)
 	}
 
-	bytes, err := getLocationAreaBytes(locationsAreaUrl)
+	bytes, err := pokeapi.GetLocationAreaBytes(locationsAreaUrl)
 	if err != nil {
 		return fmt.Errorf("could get location area bytes: %v", err)
 	}
 
-	locationArea, err := unmarshalLocationArea(bytes)
+	locationArea, err := pokeapi.UnmarshalLocationArea(bytes)
 	if err != nil {
 		return err
 	}
@@ -128,12 +131,12 @@ func commandMapB(c *Config) error {
 		return useCachedResponse(cachedBytes, c)
 	}
 
-	bytes, err := getLocationAreaBytes(c.Previous)
+	bytes, err := pokeapi.GetLocationAreaBytes(c.Previous)
 	if err != nil {
 		return fmt.Errorf("couldn't get location area bytes: %v", err)
 	}
 
-	locationArea, err := unmarshalLocationArea(bytes)
+	locationArea, err := pokeapi.UnmarshalLocationArea(bytes)
 	if err != nil {
 		return err
 	}

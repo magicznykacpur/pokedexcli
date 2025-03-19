@@ -1,4 +1,4 @@
-package internal
+package pokeapi
 
 import (
 	"encoding/json"
@@ -7,9 +7,9 @@ import (
 	"net/http"
 )
 
-const baseUrl string = "https://pokeapi.co/api/v2/"
+const BaseUrl string = "https://pokeapi.co/api/v2/"
 
-type locationArea struct {
+type LocationArea struct {
 	Count    int    `json:"count"`
 	Next     string `json:"next"`
 	Previous string `json:"previous"`
@@ -19,7 +19,7 @@ type locationArea struct {
 	} `json:"results"`
 }
 
-func getLocationAreaBytes(url string) ([]byte, error) {
+func GetLocationAreaBytes(url string) ([]byte, error) {
 	res, err := http.Get(url)
 	if err != nil {
 		return []byte{}, fmt.Errorf("couldn't get location areas: %v", err)
@@ -35,8 +35,8 @@ func getLocationAreaBytes(url string) ([]byte, error) {
 	return bytes, nil
 }
 
-func unmarshalLocationArea(bytes []byte) (locationArea, error) {
-	var locationArea locationArea
+func UnmarshalLocationArea(bytes []byte) (LocationArea, error) {
+	var locationArea LocationArea
 	if err := json.Unmarshal(bytes, &locationArea); err != nil {
 		return locationArea, fmt.Errorf("couldn't unmarshal location areas: %v", err)
 	}
