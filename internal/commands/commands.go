@@ -9,6 +9,7 @@ import (
 	"github.com/magicznykacpur/pokedexcli/internal/decoding"
 	"github.com/magicznykacpur/pokedexcli/internal/pokeapi"
 	"github.com/magicznykacpur/pokedexcli/internal/pokecache"
+	"github.com/magicznykacpur/pokedexcli/internal/pokedex"
 )
 
 type CliCommand struct {
@@ -211,8 +212,16 @@ func commandExplore(_ *Config, args ...string) error {
 	return nil
 }
 
+var usersPokedex = pokedex.NewPokedex()
+
 func commandCatch(c *Config, args ...string) error {
 	name := args[1]
+	_, ok := usersPokedex.Get(name)
+	if ok {
+		fmt.Printf("you've already caught %s...\n", name)
+		return nil
+	}
+
 	bytes, err := pokeapi.GetPokemonByName(name)
 	if err != nil {
 		return err
@@ -230,6 +239,7 @@ func commandCatch(c *Config, args ...string) error {
 
 	if randomInt > baseExp / 2 {
 		fmt.Printf("%s was caught!\n", name)
+		usersPokedex.Catch(pokemon)
 	} else {
 		fmt.Printf("%s escaped!\n", name)
 	}
